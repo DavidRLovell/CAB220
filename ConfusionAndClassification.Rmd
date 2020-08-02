@@ -1,0 +1,237 @@
+---
+title: "Confusion and classification"
+author: David Lovell
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+---
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+# Tables generated using https://www.tablesgenerator.com/html_tables#
+knitr::opts_chunk$set(echo = FALSE)
+rm(list=ls())
+
+library(tidyverse)
+library(scales)
+library(RColorBrewer)
+```
+
+
+### About this document
+
+This is more or less the script that I use for a lecture on classification and confusion matrices. I use it to provide the words that I say and (many) of the graphics that I speak to. These words and graphics are incorporated into a video along with other elements, but you should be able to get a sense of the whole production from this document.
+
+# A binary classification scenario
+
+Imagine you have created a statistical machine learning model to predict whether someone has a certain health condition or not. I’m going to use cancer as the condition because there has been a lot of effort to develop cancer screening and diagnostic systems to help people get effective treatments faster. I am also using cancer as an example because the relationship between what we can easily measure and whether someone actually has cancer or not is uncertain.
+
+* If your level of prostate specific antigen is high your risk of having prostate cancer is higher, but that doesn’t mean you have it for certain.
+* Same with breast cancer: you may have a certain variant of the BRCA1 gene which is associated with increased risk, but that does not mean you have or will get breast cancer for sure.
+
+There are many scenarios where what we can observe at the time has an uncertain relationship with the truth or ultimate outcome
+
+* is someone with certain traits a psychopath or not?
+* Will a candidate with a given approval rating get elected or not?
+
+These scenarios are called _binary classifications_: we are using the information we have at the moment to make a prediction about two possible outcomes or to classify which of two possible classes something belongs to.
+
+Here are some made-up numbers to help demonstrate this idea.
+
+
+
+
+
+
+Let’s say you apply your cancer prediction model to measurements from a sample of 100 people and for 10 of these people, the model predictions are positive:
+
+<style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;margin:0px auto;}
+.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  overflow:hidden;padding:10px 10px;word-break:normal;}
+.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  font-weight:normal;overflow:hidden;padding:10px 10px;word-break:normal;}
+.tg .tg-g7sd{border-color:inherit;font-weight:bold;text-align:left;vertical-align:middle}
+.tg .tg-0pky{border-color:inherit;text-align:left;vertical-align:top}
+</style>
+<table class="tg">
+<tbody>
+  <tr>
+    <td class="tg-g7sd" rowspan="2">Predicted<br>outcome</td>
+    <td class="tg-0pky">Positive</td>
+    <td class="tg-0pky">10</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">Negative</td>
+    <td class="tg-0pky">90</td>
+  </tr>
+</tbody>
+</table>
+
+
+> A quick note about language here: I’m trying to use the terms you will see in statistics and machine learning. Here the word “positive” is used in the sense of “test results are positive: we think you have cancer” not in the sense that these results are good news.
+
+So your model predicts that 10 individuals have cancer and the rest of the people in the sample don’t.
+
+But what’s the truth? What is reality? What is the actual cancer status of each person in this sample?
+
+Let’s imagine we are looking back on the situation from the future with knowledge of how things really turned out. That is, we know whether each of the positive and negative predictions was true or false. THis gives us a 2 by 2 table of possibilities:
+
+
+
+<style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;margin:0px auto;}
+.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  overflow:hidden;padding:10px 10px;word-break:normal;}
+.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  font-weight:normal;overflow:hidden;padding:10px 10px;word-break:normal;}
+.tg .tg-7od5{background-color:#9aff99;border-color:inherit;text-align:left;vertical-align:top}
+.tg .tg-0lax{text-align:left;vertical-align:top}
+.tg .tg-amwm{font-weight:bold;text-align:center;vertical-align:top}
+.tg .tg-yla0{font-weight:bold;text-align:left;vertical-align:middle}
+.tg .tg-90e1{background-color:#ffccc9;border-color:inherit;text-align:left;vertical-align:top}
+</style>
+<table class="tg">
+<tbody>
+  <tr>
+    <td class="tg-0lax"></td>
+    <td class="tg-amwm" colspan="2">Actual outcome</td>
+  </tr>
+  <tr>
+    <td class="tg-yla0" rowspan="2">Predicted<br>outcome</td>
+    <td class="tg-7od5"><span style="font-weight:bold;text-decoration:underline">True positive</span><span style="font-weight:normal;text-decoration:underline"> (TP)</span><br>It’s <span style="font-weight:bold">true </span>that these people who had <span style="font-weight:bold">positive </span>predictions actually had cancer.<br>They actually did have cancer.<br>The prediction was correct.</td>
+    <td class="tg-90e1"><span style="font-weight:bold;text-decoration:underline">False positive</span><span style="text-decoration:underline"> (FP)</span><br>It’s <span style="font-weight:bold">false </span>that these people who had <span style="font-weight:bold">positive </span>predictions actually had cancer.<br>They actually did not have cancer.<br>The prediction was wrong.</td>
+  </tr>
+  <tr>
+    <td class="tg-90e1"><span style="font-weight:bold;text-decoration:underline">False negative</span><span style="text-decoration:underline"> (FN)</span><br>It is <span style="font-weight:bold">false </span>that these people who had <span style="font-weight:bold">negative </span>predictions actually did not have cancer.<br>They actually did have cancer.<br>The prediction was wrong.</td>
+    <td class="tg-7od5"><span style="font-weight:bold;text-decoration:underline">True negative </span><span style="text-decoration:underline">(TN)</span><br>It is <span style="font-weight:bold">true </span>that these people who had <span style="font-weight:bold">negative </span>predictions actually did not have cancer.<br>They actually did not have cancer.<br>The prediction was correct.</td>
+  </tr>
+</tbody>
+</table>
+
+
+On the green diagonal, the predictions equal the truth, what was actually the case. This diagonal is where we will find correct classifications
+
+Numbers off that diagonal are _misclassifications_.
+
+This table is commonly known as a _confusion matrix_ because it shows we are our predictive models made correct predictions and where they got confused.
+
+So, going back to your cancer prediction model what is your ideal confusion matrix look like? Stop the video and draw that matrix.
+
+In this case, the ideal confusion matrix would look like this:
+
+where all the people you predicted had cancer actually did have cancer. And all the people you said did not have cancer were indeed free from cancer.
+
+There is no confusion in this confusion matrix.
+
+By the way, in my experience, this kind of confusion matrix suggests a few things
+
+1.	the problem is too easy. If you are really working on a problem that had proven challenging to others, say cancer prediction, this result looks too good to be true. Maybe you have chosen your sample of people in ways that give your classifier a helping hand. Say, instead of taking a random sample of people, you used records of 10 people who were receiving cancer treatment and records of 90 people who were in hospital for something else. In that case, your classifier could be picking up on measurements that are very different because the people are receiving cancer treatment.
+
+2.	This kind of confusion matrix could also suggest that you made a mistake in your evaluation and use the column of actual outcomes instead of the column of predicted outcomes. This is a very easy mistake to make, especially if you keep predictions and actual outcomes in the same file.
+
+In my experience, confusion matrices for real-world problems usually show some kind of confusion like this:
+
+here, there are two people you predicted had cancer, but did not. To false positives.
+
+Here are nine people you predicted were free from cancer, but who actually had. Nine false negatives.
+
+## Think about what misclassifications represent
+There are some situations where misclassifications like this don’t matter that much, say in marketing or advertising. If someone buys Grande when you predicted brand be, it’s probably not a big deal.
+In other situations, the stakes are high and the costs of misclassifications are immense. In our cancer sample, misclassification could put people through treatments that are painful, costly and unnecessary, or they could miss the opportunity for early diagnosis and successful treatment.
+When we are working in high-stakes decision-making situations, these aren’t just numbers in a matrix. As data scientists, we need to appreciate the misclassification costs of our predictive models. Keep that in mind as we go back to the numbers.
+
+## Different measures of classification model performance
+Even though there are only four numbers in a binary confusion matrix, there are lots of ways that people combine to describe different aspects of prediction model performance. I find this confusing! And I always have to go back to a reference to make sure I have not made a mistake.
+
+Here are some terms that I think you should be aware of.
+
+Be careful with these terms. Not only are they confusing, because there are a lot of them, they are confusing because how we use in regular conversation is a bit different to what they mean here.
+
+Let’s take your model’s predictions here and work out the accuracy
+wow! Sounds great. But I’ve got an even more accurate model that gets 90% accuracy and is really simple. Here’s the confusion matrix on the same data that you used. Can you guess what my model is?
+Pause the video and have a think.
+
+My model says “nobody gets cancer”.
+
+And since, in this sample, relatively few people do get cancer, this is an accurate prediction in terms of the statistical definition of the word accuracy.
+
+This issue arises because the true classes are unbalanced, or skewed. In our sample, far more people don’t have cancer than the few who do. So, it’s a fairly safe bet, but not very helpful, to say that any given individual is not going to develop cancer. This kind of bet completely ignores the costs of misclassification.
+
+As Tom Fawcett points out,
+
+> any performance metrics that uses values from both columns [of the confusion matrix] will be inherently sensitive to class skews. Metrics such as accuracy, precision, lift and F1 score use values from both columns of the confusion matrix.
+
+```{r}
+make.data <- function(N, negative.mean=0, positive.mean=1){
+tibble(
+  score=c(
+    rnorm(N, negative.mean),
+    rnorm(N, positive.mean)
+  ),
+  actual=
+    c(
+      rep("negative", N),
+      rep("positive", N)
+    )
+)%>%
+  mutate(
+    actual=factor(actual, levels=c("positive", "negative")
+    )
+  )
+}
+```
+
+```{r}
+classify <- function(df, threshold,offset=1){
+  matrix(
+    c(
+      "TP", "FP",
+      "FN", "TN"
+    ), 
+    byrow=TRUE, nrow=2,
+    dimnames = list(c("positive", "negative"), c("positive", "negative"))
+  ) -> confusion.matrix
+  df %>%
+    mutate(
+      predicted=ifelse(score > threshold, "positive", "negative"),
+      predicted=factor(predicted, levels=c("positive", "negative")),
+      result=confusion.matrix[cbind(predicted,actual)],
+      result=factor(result, levels=c("TP", "FP", "FN", "TN")),
+      classification=factor(ifelse(predicted==actual, "correct", "wrong"))
+    ) -> observations
+  
+  as.data.frame(table(observations$predicted, observations$actual)) %>%
+    rename(predicted=Var1, actual=Var2, n=Freq) %>%
+    mutate(
+      result=confusion.matrix[cbind(predicted,actual)],
+      classification=factor(ifelse(predicted==actual, "correct", "wrong")),
+      score=ifelse(predicted=="positive", threshold + 1, threshold -1),
+      label=sprintf("%s = %d", result, n)
+    ) %>%
+    select(score, actual, predicted, result, classification, n, label)    -> confusion
+  return(list(observations=observations, confusion=confusion))
+}
+```
+
+
+
+```{r}
+df <- make.data(50)
+threshold=2.5
+classified <- classify(df, threshold)
+
+ggplot(data=classified$observations, aes(x=actual, y=score)) +
+  geom_hline(yintercept = threshold, lty=2)+
+  geom_point(aes(color=classification)) +
+  scale_colour_brewer(palette = "Set1", direction=-1) +
+  scale_fill_brewer(palette = "Set1", direction=-1) +
+  geom_label(
+    data=classified$confusion, aes(label=label, fill =classification),
+    colour = "white", fontface = "bold", hjust=0, nudge_x = 0.1, size=5) + guides(fill=FALSE) +
+  theme(legend.justification=c(0,1), legend.position=c(0,1))
+  
+  # facet_grid(predicted ~ actual, scales="free_x")
+```
+
