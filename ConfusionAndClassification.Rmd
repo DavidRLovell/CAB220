@@ -138,8 +138,10 @@ here, there are two people you predicted had cancer, but did not. To false posit
 Here are nine people you predicted were free from cancer, but who actually had. Nine false negatives.
 
 ## Think about what misclassifications represent
-There are some situations where misclassifications like this don’t matter that much, say in marketing or advertising. If someone buys Grande when you predicted brand be, it’s probably not a big deal.
+There are some situations where misclassifications like this don’t matter that much, say in marketing or advertising. If someone buys Brand A when you predicted Brand B, it’s probably not a big deal.
+
 In other situations, the stakes are high and the costs of misclassifications are immense. In our cancer sample, misclassification could put people through treatments that are painful, costly and unnecessary, or they could miss the opportunity for early diagnosis and successful treatment.
+
 When we are working in high-stakes decision-making situations, these aren’t just numbers in a matrix. As data scientists, we need to appreciate the misclassification costs of our predictive models. Keep that in mind as we go back to the numbers.
 
 ## Different measures of classification model performance
@@ -211,27 +213,71 @@ classify <- function(df, threshold,offset=1){
       label=sprintf("%s = %d", result, n)
     ) %>%
     select(score, actual, predicted, result, classification, n, label)    -> confusion
-  return(list(observations=observations, confusion=confusion))
+  
+  n <- confusion$n
+  names(n) <- confusion$result
+  
+  tribble(
+    ~score, ~actual, ~label,
+    threshold, "positive", sprintf("TPR = %0.2f", n["TP"]/(n["TP"]+n["FN"])),
+    threshold, "negative", sprintf("FPR = %0.2f", n["FP"]/(n["FP"]+n["TN"]))
+  ) -> rates
+  
+  return(list(observations=observations, confusion=confusion, rates=rates))
+}
+```
+
+```{r}
+plot.confusion <- function(df, threshold){
+  classified <- classify(df, threshold)
+  
+  ggplot(data=classified$observations, aes(x=actual, y=score)) +
+    geom_hline(yintercept = threshold, lty=2)+
+    geom_point(aes(color=classification)) +
+    scale_colour_brewer(palette = "Set1", direction=-1) +
+    scale_fill_brewer(palette = "Set1", direction=-1) +
+    geom_label(
+      data=classified$confusion, aes(label=label, fill =classification),
+      colour = "white", fontface = "bold", hjust=0, nudge_x = 0.1, size=5) + guides(fill=FALSE) +
+    geom_label(data=classified$rates, aes(label=label),
+      fontface = "bold", hjust=0, nudge_x = 0.1, size=5)+
+    theme(legend.justification=c(0,1), legend.position=c(0,1)) 
+  
 }
 ```
 
 
+```{r}
+set.seed(37)
+df <- make.data(50)
+
+ggplot(data=classified$observations, aes(x="all", y=score)) + geom_jitter(aes(color=actual), width=0.025) +
+  scale_colour_brewer(palette = "Set2", direction=-1) +
+  theme(legend.justification=c(0,1), legend.position=c(0,1)) 
+
+
+plot.confusion(df,-2.0)
+plot.confusion(df,-1.0)
+plot.confusion(df, 0.0)
+plot.confusion(df, 1.0)
+plot.confusion(df, 2.0)
+plot.confusion(df, 3.0)
+
+```
+
+https://kennis-research.shinyapps.io/ROC-Curves/
+https://blog.revolutionanalytics.com/2016/08/roc-curves-in-two-lines-of-code.html
+
 
 ```{r}
-df <- make.data(50)
-threshold=2.5
-classified <- classify(df, threshold)
+# Modified from https://blog.revolutionanalytics.com/2016/08/roc-curves-in-two-lines-of-code.html
+simple_roc <- function(labels, scores){
+  labels <- labels[order(scores, decreasing=TRUE)]
+  data.frame(TPR=c(0,cumsum(labels))/sum(labels), FPR=c(0,cumsum(!labels))/sum(!labels), c(NA,labels))
+}
+```
 
-ggplot(data=classified$observations, aes(x=actual, y=score)) +
-  geom_hline(yintercept = threshold, lty=2)+
-  geom_point(aes(color=classification)) +
-  scale_colour_brewer(palette = "Set1", direction=-1) +
-  scale_fill_brewer(palette = "Set1", direction=-1) +
-  geom_label(
-    data=classified$confusion, aes(label=label, fill =classification),
-    colour = "white", fontface = "bold", hjust=0, nudge_x = 0.1, size=5) + guides(fill=FALSE) +
-  theme(legend.justification=c(0,1), legend.position=c(0,1))
-  
-  # facet_grid(predicted ~ actual, scales="free_x")
+```{r}
+ggplot(data=simple_roc(df$actual=="positive",df$score), aes(x=FPR, y=TPR)) + geom_step() + coord_equal()
 ```
 
