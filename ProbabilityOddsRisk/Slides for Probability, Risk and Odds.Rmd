@@ -1,0 +1,246 @@
+---
+title: "Probability, Risk and Odds"
+author: "David Lovell"
+date: "04/08/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Tables generated using https://www.tablesgenerator.com/html_tables#
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(htmltools)
+```
+
+# Probability, a.k.a. Absolute risk
+
+```{r echo=FALSE}
+includeHTML("ProbabilityOddsRisk-Sunburn.html")
+```
+
+
+$$
+\begin{aligned}
+\mathrm{P}(\mathrm{sunburn}|\mathrm{exposed}) &= \frac{64}{64+36}\\[2ex]
+&= `r 64/(64+36)`\\[3ex]
+\mathrm{P}(\mathrm{sunburn}|\mathrm{not~exposed}) &= \frac{3}{3+97}\\[2ex]
+&= `r 3/(3+97)`
+\end{aligned}
+$$
+so the _risk ratio_ is
+
+$$
+\begin{aligned}
+\mathrm{Relative~risk} &= \frac{\mathrm{P}(\mathrm{sunburn}|\mathrm{exposed})}{\mathrm{P}(\mathrm{sunburn}|\mathrm{not~exposed})}\\[2ex]
+&= \frac{`r (64/(64+36))`}{`r (3/(3+97))`}\\[2ex] 
+&= `r (64/(64+36)) / (3/(3+97))` 
+\end{aligned}
+$$
+
+
+more generally:
+
+```{r echo=FALSE}
+includeHTML("ProbabilityOddsRisk-General.html")
+```
+
+and:
+$$
+\begin{aligned}
+\mathrm{P}(\mathrm{event}|\mathrm{exposed}) &= \frac{a}{a+b}\\[2ex]
+\mathrm{P}(\mathrm{event}|\mathrm{not~exposed}) &= \frac{c}{c+d}\\[2ex]
+\mathrm{Relative~risk} &= \frac{\mathrm{P}(\mathrm{event}|\mathrm{exposed})}{\mathrm{P}(\mathrm{event}|\mathrm{not~exposed})}\\[2ex]
+&= \frac{a/(a+b)}{c/(c+d)}
+\end{aligned}
+$$
+
+# Odds
+```{r echo=FALSE}
+includeHTML("ProbabilityOddsRisk-Sunburn.html")
+```
+
+$$
+\begin{aligned}
+\frac{\mathrm{P}(\mathrm{sunburn}|\mathrm{exposed})}{\mathrm{P}(\mathrm{no~sunburn}|\mathrm{exposed})} &= \frac{64/100}{36/100}\\[2ex]
+&= \frac{64}{36}\\[2ex]
+&= `r 64/(36)`\\[3ex]
+\frac{\mathrm{P}(\mathrm{sunburn}|\mathrm{not~exposed})}{\mathrm{P}(\mathrm{no~sunburn}|\mathrm{not~exposed})} &= \frac{3/100}{97/100}\\[2ex]
+&= \frac{3}{97}\\[2ex]
+&= `r 3/(97)`\end{aligned}
+$$
+so the _odds ratio_ is
+
+$$
+\begin{aligned}
+\mathrm{Odds~ratio} &=
+\frac{\mathrm{P}(\mathrm{sunburn}|\mathrm{exposed})}{\mathrm{P}(\mathrm{no~sunburn}|\mathrm{exposed})}
+\bigg/
+\frac{\mathrm{P}(\mathrm{sunburn}|\mathrm{not~exposed})}{\mathrm{P}(\mathrm{no~sunburn}|\mathrm{not~exposed})}
+\\[2ex]
+&= \frac{64}{36} \bigg/ \frac{3}{97}\\[2ex]
+&=\frac{`r 64/(36)`}{`r 3/97`}\\[2ex]
+&=`r (64/36) / (3/97)`
+\end{aligned}
+$$
+
+
+
+If the probability of an event is $p$, then the odds of that event 
+are
+$$
+\mathrm{odds} = \frac{p}{1-p}
+$$
+
+This means we can write the probability of that event in terms of its odds like this:
+$$
+p = \frac{\mathrm{odds}}{1+\mathrm{odds}}
+$$
+
+```{r echo=FALSE}
+includeHTML("ProbabilityOddsRisk-General.html")
+```
+
+
+$$
+\begin{aligned}
+\mathrm{odds}(\mathrm{event}|\mathrm{exposed}) &= \frac{a}{b}\\[2ex]
+\mathrm{odds}(\mathrm{event}|\mathrm{not~exposed}) &= \frac{c}{d}\\[2ex]
+\mathrm{odds~ratio} &= \frac{\mathrm{odds}(\mathrm{event}|\mathrm{exposed})}{\mathrm{odds}(\mathrm{event}|\mathrm{not~exposed})}\\[2ex]
+&= \frac{a/b}{c/d}\\[2ex]
+&= \frac{ad}{bc}
+\end{aligned}
+$$
+
+
+## Odds and log odds
+
+Logistic regression is based on log odds:
+$$
+\log\frac{p}{1-p} = \beta_0 + \beta_1 x_1 + \beta_2 x_2
+$$
+
+
+```{r}
+probability <- function(p) return(p)
+odds        <- function(p) return(p/(1-p))
+log.odds    <- function(p) return(log10(odds(p)))
+```
+
+
+```{r}
+functions <- c("y = p", "y = p/(1-p)", "y = log(p/(1-p))")
+
+tribble(
+  ~p, ~y, ~fn, ~label,
+  1/2, probability(1/2), functions[1], "1/2",
+  1/2, odds(1/2),        functions[2], "1/1",
+  1/2, log.odds(1/2),    functions[3], "0",
+) -> eg1
+
+tribble(
+  ~p, ~y, ~fn, ~label,
+  1/3, probability(1/3), functions[1], "1/3",
+  1/3, odds(1/3),        functions[2], "1/2",
+  1/3, log.odds(1/3),    functions[3], sprintf("%0.3f", log10(1/2))
+) -> eg2
+
+tribble(
+  ~p, ~y, ~fn, ~label,
+  2/3, probability(2/3), functions[1], "2/3",
+  2/3, odds(2/3),        functions[2], "2/1",
+  2/3, log.odds(2/3),    functions[3], sprintf("%0.3f", log10(2/1))
+) -> eg3
+
+```
+
+Just probability
+```{r}
+
+ggplot(data=data.frame(p=0), mapping=aes(x=p)) +
+  stat_function(fun=probability, aes(color=functions[1])) + 
+  stat_function(fun=odds, aes(color=functions[2]), alpha=0) + 
+  stat_function(fun=log.odds, aes(color=functions[3]), alpha=0) +
+  xlim(0.001, 0.999) + 
+  coord_equal(ylim=c(-2,2)) +
+  scale_colour_discrete(breaks=functions, name="function") +
+  labs(title="Probability, odds and log odds") -> p
+
+p
+  
+```
+
+Now odds
+```{r}
+
+ggplot(data=data.frame(p=0), mapping=aes(x=p)) +
+  stat_function(fun=probability, aes(color=functions[1])) + 
+  stat_function(fun=odds, aes(color=functions[2])) + 
+  stat_function(fun=log.odds, aes(color=functions[3]), alpha=0) +
+  xlim(0.001, 0.999) + 
+  coord_equal(ylim=c(-2,2)) +
+  scale_colour_discrete(breaks=functions, name="function") +
+  labs(title="Probability, odds and log odds") -> p
+
+p
+  
+```
+
+
+```{r}
+p+ 
+  geom_point(data=eg1, aes(y=y, color=fn)) +
+  geom_text(data=eg1, aes(y=y, label=label, color=fn), nudge_x=0.07, hjust=0, show.legend = FALSE) 
+```
+
+```{r}
+p+ 
+  geom_point(data=subset(eg2, fn!=functions[3]), aes(y=y, color=fn)) +
+  geom_text(data=subset(eg2, fn!=functions[3]), aes(y=y, label=label, color=fn), nudge_x=0.07, hjust=0, show.legend = FALSE) -> p2
+p2
+```
+
+```{r}
+p2 +   geom_point(data=subset(eg3, fn!=functions[3]), aes(y=y, color=fn)) +
+  geom_text(data=subset(eg3, fn!=functions[3]), aes(y=y, label=label, color=fn), nudge_x=0.07, hjust=0, show.legend = FALSE)
+```
+
+
+```{r}
+p2 +  
+  geom_hline(yintercept=0.5, lty=2) + geom_point(data=subset(eg3, fn!=functions[3]), aes(y=y, color=fn)) +
+  geom_text(data=subset(eg3, fn!=functions[3]), aes(y=y, label=label, color=fn), nudge_x=0.07, hjust=0, show.legend = FALSE) 
+```
+
+
+```{r}
+ggplot(data=data.frame(p=0), mapping=aes(x=p)) +
+  geom_hline(yintercept=0, lty=2) + 
+  stat_function(fun=probability, aes(color=functions[1])) + 
+  stat_function(fun=odds, aes(color=functions[2])) + 
+  stat_function(fun=log.odds, aes(color=functions[3])) +
+  xlim(0.001, 0.999) + 
+  coord_equal(ylim=c(-2,2)) +
+  scale_colour_discrete(breaks=functions, name="function") +
+  labs(title="Probability, odds and log odds") -> p
+
+p +   geom_point(data=eg2, aes(y=y, color=fn)) +
+  geom_text(data=eg2, aes(y=y, label=label, color=fn), nudge_x=-0.05, hjust=1, show.legend = FALSE) +
+  geom_point(data=eg3, aes(y=y, color=fn)) +
+  geom_text(data=eg3, aes(y=y, label=label, color=fn), nudge_x=0.07, hjust=0, show.legend = FALSE) 
+```
+
+```{r}
+p + coord_flip(ylim=c(-2,2)) + theme(aspect.ratio = 1/4) 
+
+```
+
+
+
+
+
+# References
+
+* https://rpubs.com/kaz_yos/ggplot2-stat-function
+* https://stackoverflow.com/questions/42115611/ggplot2-flip-axes-and-maintain-aspect-ratio-of-data
+* http://www.cookbook-r.com/Graphs/Legends_(ggplot2)/#changing-the-order-of-items-in-the-legend

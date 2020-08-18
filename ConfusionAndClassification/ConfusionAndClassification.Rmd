@@ -1,0 +1,655 @@
+---
+title: "Confusion and classification"
+author: David Lovell
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+---
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+# Tables generated using https://www.tablesgenerator.com/html_tables#
+knitr::opts_chunk$set(echo = FALSE)
+rm(list=ls())
+
+library(tidyverse)
+library(scales)
+library(RColorBrewer)
+library(htmltools)
+library(ggpubr)
+library(knitr)
+library(kableExtra)
+```
+
+
+### About this document
+
+This is more or less the script that I use for a lecture on classification and confusion matrices. I use it to provide the words that I say and (many) of the graphics that I speak to. These words and graphics are incorporated into a video along with other elements, but you should be able to get a sense of the whole production from this document.
+
+# A binary classification scenario
+
+Imagine you have created a statistical machine learning model to predict whether someone has a certain health condition or not. I’m going to use cancer as the condition because there has been a lot of effort to develop cancer screening and diagnostic systems to help people get effective treatments faster. I am also using cancer as an example because the relationship between what we can easily measure and whether someone actually has cancer or not is uncertain.
+
+* If your level of prostate specific antigen is high your risk of having prostate cancer is higher, but that doesn’t mean you have it for certain.
+* Same with breast cancer: you may have a certain variant of the BRCA1 gene which is associated with increased risk, but that does not mean you have or will get breast cancer for sure.
+
+There are many scenarios where what we can observe at the time has an uncertain relationship with the truth or ultimate outcome
+
+* Is someone with certain traits a psychopath or not?
+* Will an American state with a given demographic vote republican or democrat?
+
+Two topical scenarios involving _binary classifications_: we are using the information we have at the moment to make a prediction about two possible outcomes or to classify which of two possible classes something belongs to.
+
+Here are some made-up numbers to help demonstrate this idea with your cancer prediction model.
+
+Let’s say you apply your cancer prediction model to measurements from a sample of 100 people and for 10 of these people, the model predictions are positive:
+
+```{r echo=FALSE}
+includeHTML("Confusion-cancer-actual.html")
+```
+
+
+> A quick note about language here: I’m trying to use the terms you will see in statistics and machine learning. Here the word “positive” is used in the sense of “test results are positive: we think you have cancer” not in the sense that these results are good news.
+
+So your model predicts that 10 individuals have cancer and the rest of the people in the sample don’t.
+
+But what’s the truth? What is reality? What is the actual cancer status of each person in this sample?
+
+Let’s imagine we are looking back on the situation from the future with knowledge of how things really turned out. That is, we know whether each of the positive and negative predictions was true or false. This gives us a 2 by 2 table of possibilities:
+
+```{r echo=FALSE}
+includeHTML("Confusion-cancer.html")
+```
+
+On the green diagonal, the predictions equal the truth, what was actually the case. This diagonal is where we will find correct classifications: the true positives and the true negatives
+
+Numbers off that diagonal are _misclassifications_. These are the false positives and false negatives.
+
+This table is commonly known as a _confusion matrix_ because it shows we are our predictive models made correct predictions and where they got confused.
+
+So, going back to your cancer prediction model what is your ideal confusion matrix look like? Stop the video and draw that matrix.
+
+```{r echo=FALSE}
+includeHTML("Confusion-cancer-question.html")
+```
+
+
+In this case, the ideal confusion matrix would look like this:
+
+```{r echo=FALSE}
+includeHTML("Confusion-cancer-ideal.html")
+```
+
+where all the people you predicted had cancer actually did have cancer. And all the people you said did not have cancer were indeed free from cancer.
+
+There is no confusion in this confusion matrix.
+
+By the way, in my experience, this kind of confusion matrix suggests a few things
+
+1.	the problem is too easy. If you are really working on a problem that had proven challenging to others, say cancer prediction, this result looks too good to be true. Maybe you have chosen your sample of people in ways that give your classifier a helping hand. Say, instead of taking a random sample of people, you used records of 10 people who were receiving cancer treatment and records of 90 people who were in hospital for something else. In that case, your classifier could be picking up on measurements that are very different because the people are receiving cancer treatment.
+
+2.	This kind of confusion matrix could also suggest that you made a mistake in your evaluation and use the column of actual outcomes instead of the column of predicted outcomes. This is a very easy mistake to make, especially if you keep predictions and actual outcomes in the same file.
+
+In my experience, confusion matrices for real-world problems usually show some kind of confusion like this:
+
+
+```{r echo=FALSE}
+includeHTML("Confusion-cancer-real.html")
+```
+
+* Here are two people you predicted had cancer, but did not. Two false positives.
+* Here are nine people you predicted were free from cancer, but who actually had. Nine false negatives.
+
+## Think about what misclassifications represent
+There are some situations where misclassifications like this don’t matter that much, say in marketing or advertising. If someone buys Brand A when you predicted Brand B, it’s probably not a big deal.
+
+In other situations, the stakes are high and the costs of misclassifications are immense. In our cancer sample, misclassification could put people through treatments that are painful, costly and unnecessary, or they could miss the opportunity for early diagnosis and successful treatment.
+
+When we are working in high-stakes decision-making situations, these aren’t just numbers in a matrix. As data scientists, we need to appreciate the misclassification costs of our predictive models. Keep that in mind as we go back to the numbers.
+
+## Different measures of classification model performance
+Even though there are only four numbers in a binary confusion matrix, there are lots of ways that people combine to describe different aspects of prediction model performance. I find this confusing! And I always have to go back to a reference to make sure I have not made a mistake.
+```{r Confusion-general1, echo=FALSE}
+includeHTML("Confusion-general.html")
+```
+
+Here are some terms you should be aware of.
+
+| Term                      | Expression                                                                 | Also known as                                   |
+|---------------------------|----------------------------------------------------------------------------|-------------------------------------------------|
+| true positive             | $\mathrm{TP}$                                                              | hit                                             |
+| true negative             | $\mathrm{TN}$                                                              | correct rejection                               |
+| false positive            | $\mathrm{FP}$                                                              | false alarm, Type I error                       |
+| false negative            | $\mathrm{FN}$                                                              | miss, Type II error                             |
+| condition positive        | $\mathrm{P}= \mathrm{TP}+\mathrm{FN}$                                      | the number of actual positive cases in the data |
+| condition negative        | $\mathrm{N}= \mathrm{TN}+\mathrm{FP}$                                      | the number of actual negative cases in the data |
+| true positive rate        | $\mathrm{TPR} = \frac{\mathrm{TP}}{\mathrm{P}}$                            | sensitivity, recall, hit rate                   |
+| false positive rate       | $\mathrm{FPR} = \frac{\mathrm{FP}}{\mathrm{N}}$                            | fall-out                                        |
+| true negative rate        | $\mathrm{TNR} = \frac{\mathrm{TN}}{\mathrm{N}}$                            | specificity, selectivity                        |
+| positive predictive value | $\mathrm{PPV} = \frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FP}}$               | precision                                       |
+| false discovery rate      | $\mathrm{FDR} = \frac{\mathrm{FP}}{\mathrm{TP}+\mathrm{FP}}=1-\mathrm{PPV}$|                                                 |
+| accuracy                  | $\frac{\mathrm{TP}+\mathrm{TN}}{\mathrm{P}+\mathrm{N}}$                    |                                                 |
+| F1 score                  | $2\cdot\frac{\mathrm{PPV}\cdot\mathrm{TPR}}{\mathrm{PPV}+\mathrm{TPR}}$    | harmonic mean of precision and sensitivity      |
+| informedness              | sensitivity + specificity - 1                                              | Youden's J statistic                            |
+|Matthews correlation coefficient| $\mathrm{MCC} = \frac{ \mathrm{TP} \times \mathrm{TN} - \mathrm{FP} \times \mathrm{FN} } {\sqrt{ (\mathrm{TP} + \mathrm{FP}) ( \mathrm{TP} + \mathrm{FN} ) ( \mathrm{TN} + \mathrm{FP} ) ( \mathrm{TN} + \mathrm{FN})}}$ | Pearson's phi coefficient|
+
+Be careful with these terms. Not only are they confusing, because there are a lot of them, they are confusing because how we use in regular conversation is a bit different to what they mean here.
+
+Let’s take this model’s predictions here and work out the accuracy
+
+```{r Confusion-cancer-real, echo=FALSE}
+includeHTML("Confusion-cancer-real.html")
+```
+
+What do you get?
+
+```{r}
+TP <- 8
+FP <- 2
+FN <- 9
+TN <- 81
+```
+
+$$
+\begin{align}
+\mathrm{accuracy} &= \frac{\mathrm{TP}+\mathrm{TN}}{\mathrm{P}+\mathrm{N}}\\[2ex]
+&= \frac{`r TP` + `r TN`}{`r TP` + `r FN` + `r TN` + `r FP`}\\[2ex]
+&= \frac{`r TP + TN`}{`r TP+ FN+ TN+ FP`}\\[2ex]
+&= `r (TP + TN)/(TP+ FN+ TN+ FP)`
+\end{align}
+$$
+
+
+wow! Sounds great. But I’ve got an even more accurate model that gets 90% accuracy and is really simple. Here’s the confusion matrix on the same data that you used. Can you guess what my model is?
+Pause the video and have a think.
+
+
+```{r Confusion-nocancer-real, echo=FALSE}
+includeHTML("Confusion-nocancer-real.html")
+```
+
+```{r}
+TP <- 0
+FP <- 0
+FN <- 10
+TN <- 90
+```
+
+$$
+\begin{align}
+\mathrm{accuracy} &= \frac{\mathrm{TP}+\mathrm{TN}}{\mathrm{T}+\mathrm{P}}\\[2ex]
+&= \frac{`r TP` + `r TN`}{`r TP` + `r FN` + `r TN` + `r FP`}\\[2ex]
+&= \frac{`r TP + TN`}{`r TP+ FN+ TN+ FP`}\\[2ex]
+&= `r (TP + TN)/(TP+ FN+ TN+ FP)`
+\end{align}
+$$
+
+My model says “nobody gets cancer” ... ever.
+
+And since, in this sample, relatively few people do get cancer, this is an accurate prediction *in terms of the statistical definition of the word accuracy*.
+
+This issue arises because *the true classes are unbalanced*, or skewed. In our sample, far more people don’t have cancer than the few who do. So, it’s a fairly safe bet (but not very helpful) to say that any given individual is not going to develop cancer. This kind of bet completely ignores the costs of misclassification.
+
+As Tom Fawcett points out,
+
+> any performance metrics that uses values from both columns [of the confusion matrix] will be inherently sensitive to class skews. Metrics such as accuracy, precision, lift and F1 score use values from both columns of the confusion matrix.
+
+So, beware of using these statistics to compare classifier performance _between_ different datasets.
+
+A better approach is to use a performance measure that uses two metrics, true positive rate (TPR) and false positive rate (FPR), each of which is calculated from a single column within the confusion matrix:
+
+```{r Confusion-general2, echo=FALSE}
+includeHTML("Confusion-general.html")
+```
+
+$$
+\begin{aligned}
+\mathrm{TPR} &= \frac{\mathrm{TP}}{\mathrm{P}} = \frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FN}}\\[2ex]
+\mathrm{FPR} &= \frac{\mathrm{FP}}{\mathrm{N}}= \frac{\mathrm{FP}}{\mathrm{FP}+\mathrm{FN}}
+\end{aligned}
+$$
+
+This idea is the basis of the Receiver Operating Characteristic curve, an approach that was developed in World War II when human observers (called "receivers") had to distinguish a genuine signal against a noisy background on a RADAR screen.
+
+This situation is a recipe for confusion: is that an actual plane on the Radar or not? It's not a clear cut decision and it depends on where the receiver "draws the line" what is their threshold for deciding whether something is an actual plane or just noise.
+
+With human classifiers, it's not easy to tell what threshold is being applied, but in statistical machine learning we can make that threshold explicit.
+
+Imagine we have a classifier that works by applying a threshold to some numerical score. Any score above that threshold is classified as a "positive"; anything below is a negative. 
+This simple approach is at the heart of many classification systems, from those based on logistic regression, through to those using neural networks.
+
+I've made up some data and all the cases are plotted here with their score's on the y-axis. Also shown is a threshold of 3.5 which classifies everything as "negative". Is that right? Is that wrong? What do you think?
+
+Well we just can't tell. We need some additional information about the actual outcomes for each score.
+
+```{r function-make.data}
+make.data <- function(N, negative.mean=0, positive.mean=1){
+tibble(
+  score=c(
+    rnorm(N, negative.mean),
+    rnorm(N, positive.mean)
+  ),
+  actual=
+    c(
+      rep("negative", N),
+      rep("positive", N)
+    )
+)%>%
+  mutate(
+    actual=factor(actual, levels=c("positive", "negative")
+    )
+  )
+}
+```
+
+```{r function-classify}
+classify <- function(df, threshold,offset=1){
+  matrix(
+    c(
+      "TP", "FP",
+      "FN", "TN"
+    ), 
+    byrow=TRUE, nrow=2,
+    dimnames = list(c("positive", "negative"), c("positive", "negative"))
+  ) -> confusion.matrix
+  df %>%
+    mutate(
+      predicted=ifelse(score > threshold, "positive", "negative"),
+      predicted=factor(predicted, levels=c("positive", "negative")),
+      result=confusion.matrix[cbind(predicted,actual)],
+      result=factor(result, levels=c("TP", "FP", "FN", "TN")),
+      classification=factor(ifelse(predicted==actual, "correct", "wrong"))
+    ) -> observations
+  
+  as.data.frame(table(observations$predicted, observations$actual)) %>%
+    rename(predicted=Var1, actual=Var2, n=Freq) %>%
+    mutate(
+      result=confusion.matrix[cbind(predicted,actual)],
+      classification=factor(ifelse(predicted==actual, "correct", "wrong")),
+      score=ifelse(predicted=="positive", threshold + 1, threshold -1),
+      label=sprintf("%s = %d", result, n)
+    ) %>%
+    select(score, actual, predicted, result, classification, n, label)    -> confusion
+  
+  n <- confusion$n
+  names(n) <- confusion$result
+  
+  tribble(
+    ~score, ~actual, ~label,
+    threshold, "positive", sprintf("TPR = %0.2f", n["TP"]/(n["TP"]+n["FN"])),
+    threshold, "negative", sprintf("FPR = %0.2f", n["FP"]/(n["FP"]+n["TN"]))
+  ) -> rates
+  
+  return(list(observations=observations, confusion=confusion, rates=rates))
+}
+```
+
+```{r function-plot.confusion}
+plot.confusion <- function(df, threshold, ylim=c(-3,5)){
+  classified <- classify(df, threshold)
+  
+  ggplot(data=classified$observations, aes(x=actual, y=score)) +
+    geom_hline(yintercept = threshold, lty=2)+
+    geom_point(aes(color=classification)) +
+    scale_colour_brewer(palette = "Set1", direction=-1) +
+    scale_fill_brewer(palette = "Set1", direction=-1) +
+    geom_label(
+      data=classified$confusion, aes(label=label, fill =classification),
+      colour = "white", fontface = "bold", hjust=0, nudge_x = 0.05, size=4) + guides(fill=FALSE) +
+    geom_label(data=classified$rates, aes(label=label),
+      fontface = "bold", hjust=0, nudge_x = 0.05, size=4)+
+    theme(legend.justification=c(0,1), legend.position=c(0,1)) +
+    ylim(ylim)
+  
+}
+```
+
+```{r function-plot.classes}
+plot.classes <- function(df){
+  ggplot(data=df, aes(x=actual, y=score)) +
+    geom_jitter(aes(color=actual), width = 0.1) +
+    theme(legend.justification=c(1,1), legend.position=c(1,1)) 
+}
+```
+
+
+```{r function-plot.threshold}
+plot.threshold <- function(df, threshold, ylim=c(-3,5)){
+  ggplot(data=df, aes(x="all", y=score)) +
+    geom_hline(yintercept = threshold, lty=2)+
+    geom_jitter(
+      width = 0.05,
+      aes(color=factor(ifelse(score > threshold, "positive", "negative"),        levels=c("positive", "negative")      )      )
+    ) +
+    xlab("cases") +
+    scale_colour_brewer(palette = "Set2", direction=-1, name="classification", drop=FALSE) +
+    theme(legend.justification=c(0,1), legend.position=c(0,1))+
+    ylim(ylim)
+}
+```
+
+```{r function-simple.roc}
+# Modified from https://blog.revolutionanalytics.com/2016/08/roc-curves-in-two-lines-of-code.html
+simple.roc <- function(labels, scores){
+  ordered.scores <- order(scores, decreasing=TRUE)
+  labels <- labels[ordered.scores]
+  data.frame(TPR=c(0,cumsum(labels))/sum(labels), FPR=c(0,cumsum(!labels))/sum(!labels), labels=c(NA,labels), score=c(Inf, scores[ordered.scores]))
+}
+```
+
+```{r function-plot.roc}
+plot.roc <- function(df, threshold=-Inf, lastpoint=TRUE){
+  diagonal <- data.frame(FPR=c(0,1), TPR=c(0,1))
+  df.roc <- simple.roc(df$actual=="positive",df$score) 
+  df.roc.threshold <- subset(df.roc, score >threshold)
+  df.roc.threshold[nrow(df.roc.threshold),] %>%
+    mutate(label=sprintf("  (%0.2f, %0.2f)  ", FPR, TPR)) ->  df.lastpoint
+  p <- ggplot(data=df.roc.threshold, aes(x=FPR, y=TPR)) + geom_step() + coord_equal(xlim=c(0,1), ylim=c(0,1)) +
+    geom_line(data=diagonal, lty=2) +
+    xlab("False Positive Rate (FPR)") + ylab("True Positive Rate (TPR)")
+  
+  if(lastpoint){
+    return(p +  geom_point(data=df.lastpoint)  +    geom_text(data=df.lastpoint, aes(label=label), hjust="inward"))
+  }
+  else{
+    return(p)
+  }
+}
+
+```
+
+
+
+```{r function-plot.all}
+plot.all <- function(df, threshold){
+  p <- ggarrange(plot.threshold(df, threshold), plot.confusion(df, threshold), plot.roc(df, threshold), nrow=1, widths=c(1,1.8,2))
+  ggsave(p, file=sprintf("figs/roc.%0.1f.png", threshold), width=14*0.9, height=5*0.9)
+  return(p)
+}
+```
+
+```{r}
+set.seed(37)
+df1 <- make.data(50)
+```
+
+
+```{r fig.asp=5/14, fig.width=12, warning=FALSE, message=FALSE, eval=TRUE}
+plot.all(df1, 3.5)
+plot.all(df1, 3.0)
+plot.all(df1, 2.5)
+plot.all(df1, 2.0)
+plot.all(df1, 1.5)
+plot.all(df1, 1.0)
+plot.all(df1, 0.5)
+plot.all(df1, 0.0)
+plot.all(df1, -0.5)
+plot.all(df1, -1.0)
+plot.all(df1, -1.5)
+plot.all(df1, -2.0)
+plot.all(df1, -2.5)
+plot.all(df1, -3.0)
+```
+
+When we show the actual outcomes, we can see that this threshold misclassified all the positives, but got all the negatives right. The true positive rate at this threshold is zero, and so is the false positive rate.
+Let's plot that on two axes like this
+
+Now let's see what happens if we are less stringent, and drop the threshold a bit. Now we correctly classify four out of fifty (8%) of the positives and still get all the negatives correct.
+
+Even better, if we have a threshold of 2. Our true positive rate rises to 22% and our false positive rate remains at zero
+
+At a threshold of 1.5, we get our first false positive
+
+And as we lower the threshold further, the false positive rate rises further,as does the true positive rate
+
+When the threshold drops below all the scores, we correctly classify all the positives --- so our true positive rate is 1 --- BUT, we also misclassify all the negatives so our _false_ positive rate is also 1.
+
+And at this point, we have plotted in the rightmost panel  the true positive and false positive rates achieved across all thresholds.
+
+This is the Receiver Operating Characteristic curve for the scores assigned to the positive and negative cases in our data.
+
+And the area under this curve has an important statistical meaning: it is
+the probability that a randomly chosen positive instance will have a higher score than a randomly chosen negative one.
+
+This probability is related to the Mann-Whitney U statistic
+
+
+```{r}
+p <- plot.roc(df1,  lastpoint=FALSE)
+df1.wilcox <- wilcox.test(score ~ actual, data=df1)
+df1.AUC <- unname(df1.wilcox$statistic/(sum(df1$actual=="negative") * sum(df1$actual=="positive")))
+```
+
+With this data, the probability is `r df1.AUC`.
+$$
+\begin{align}
+\text{Mann-Whitney U} &= `r df1.wilcox$statistic`\\[2ex]
+\text{AUC} &= \frac{\mathrm{U}}{\mathrm{P} \cdot \mathrm{N}}\\[2ex]
+&= \frac{`r df1.wilcox$statistic`}{`r sum(df1$actual=="negative") ` \cdot `r sum(df1$actual=="positive")`}\\[2ex]
+&= `r df1.AUC`
+\end{align}
+$$
+
+The Area Under the Curve, or AUC, tells us how well separated are the distributions of scores for the two classes. We'll illustrate that in a moment.
+
+One important thing to note is that the AUC depends only on the _ranks_ of the the scores, not their numeric values. All we need to calculate the AUC is the list of positive and negative cases in order of their scores... the values of their scores don't matter, only their order.
+
+To illustrate that, let's go through our data in order from the lowest scoring case to the highest scoring case, and write down a "+" sign, every time we see a positive case and a "-" sign every time we see a negative case. That gives us these case labels
+```{r}
+df.string <- function(df){
+  return(paste((arrange(df, score) %>% mutate(sign=ifelse(actual=="negative", "-", "+")) %>% select(sign))$sign, collapse = ""))
+}
+
+df1.string <- df.string(df1)
+```
+
+Any scoring system that put our cases in this order would yield the same ROC curve and area under it. We don't need to know the score values, just the order that they put the data into.
+
+
+```{r}
+plot.classes.roc <- function(df, filename=""){
+  p <- ggarrange(plot.classes(df), plot.roc(df, lastpoint=FALSE), nrow=1, widths=c(1,3), align="h")
+  ggsave(p, file=sprintf("figs/%s.png", filename), width=10*0.9, height=5*0.9)
+  return(p)
+}
+```
+
+
+```{r}
+plot.classes.roc(df1, "df1")
+df1.string <- df.string(df1)
+df1.wilcox <- wilcox.test(score ~ actual, data=df1)
+```
+
+
+Here's a different dataset, this time, with even better separation between the scores of the positive and negative cases.
+
+```{r}
+df2 <- make.data(50, negative.mean = 0, positive.mean = 3)
+plot.classes.roc(df2, "df2")
+df2.string <- df.string(df2)
+df2.wilcox <- wilcox.test(score ~ actual, data=df2)
+df2.AUC <- unname(df2.wilcox$statistic/(sum(df2$actual=="negative") * sum(df2$actual=="positive")))
+```
+
+This dataset has an AUC of `r df2.AUC` which is closer to 1, a value achieved when the two classes are perfectly separable.
+
+$$
+\begin{align}
+\text{Mann-Whitney U} &= `r df2.wilcox$statistic`\\[2ex]
+\text{AUC} &= \frac{\mathrm{U}}{n_1 n_2}\\[2ex]
+&= \frac{`r df2.wilcox$statistic`}{`r sum(df2$actual=="negative") ` \cdot `r sum(df2$actual=="positive")`}\\[2ex]
+&= `r df2.AUC`
+\end{align}
+$$
+
+Here's a third dataset, this time, with the scores of the positive and negative cases chosen at random
+
+
+```{r}
+df3 <- make.data(50, negative.mean = 0, positive.mean = 0)
+plot.classes.roc(df3, "df3")
+df3.string <- df.string(df3)
+df3.wilcox <- wilcox.test(score ~ actual, data=df3)
+df3.AUC    <- unname(df3.wilcox$statistic/(sum(df3$actual=="negative") * sum(df3$actual=="positive")))
+
+```
+
+This dataset has an AUC of `r df3.AUC` which is close to 0.5, a value achieved when the two classes are randomly mixed. The dashed diagonal line in these ROC curves indicates the curve we would expect for randomly intermixed samples
+
+$$
+\begin{align}
+\text{Mann-Whitney U} &= `r df3.wilcox$statistic`\\[2ex]
+\text{AUC} &= \frac{\mathrm{U}}{n_1 n_2}\\[2ex]
+&= \frac{`r df3.wilcox$statistic`}{`r sum(df3$actual=="negative") ` \cdot `r sum(df3$actual=="positive")`}\\[2ex]
+&= `r df3.AUC`
+\end{align}
+$$
+
+Now let's arrange our datsets in descending order of separation of positive and negative cases.
+```{r}
+tribble(
+  ~Dataset, ~AUC, ~Labels,
+  "2", df2.AUC, df2.string,
+  "1", df1.AUC, df1.string,
+  "3", df3.AUC, df3.string
+)  -> datasets
+
+datasets
+```
+
+The datasets that better sort the positive and negative cases have the higher area under the ROC curve.
+```{r eval=FALSE}
+kable(datasets) %>%
+  column_spec(3, monospace=TRUE) 
+
+```
+
+# Base rate neglect
+
+The receiver operating characteristic gives us a way to evaluate how well we could discriminate between two classes. But often, we are not given underlying scores. we may just be told the true positive and false positive rates of a test.
+
+We can still present this information using the tabular format of the confusion matrix, only now it is referred to as a “contingency table” or “cross-tabulation” and it shows the frequency of different categorical variables in a sample.
+
+It’s very important to understand this binary classification table to avoid being misled by something called “base rate neglect” 
+Let’s explore that with an example.
+
+Suppose there is a test that can detect cancer in biopsies 80% of the time.
+It also gives false positives 10% of the time.
+Your friend has just taken the test and it’s come back positive.
+His doctor said that this cancer occurs in about 1% of biopsies in your friend’s age and gender cohort.
+Your friend asks you what’s the probability he really has cancer given the test was positive.
+Do you think the probability is between
+
+* 0-19%
+* 20-39%
+* 40-59%
+* 60-79%
+* 80-100%
+
+What do you think? Write down your answer and keep going with the video.
+
+I am going to show you two ways to figure out the probability that your friend really does have cancer, given the positive test result. And, a confession: I have to look at this working every time I am faced with a binary classification question.
+Ready?
+
+
+```{r Biopsy, echo=FALSE}
+includeHTML("Biopsy.html")
+```
+
+The first approach is to think about a convenient number of people.
+
+* Let’s say 1000.
+* The incidence of cancer is 1%, so we would expect to see 10 people in a sample of 1000, who actually have the cancer, and 990 who don’t.
+* The true positive rate is 80%. That is to say, when someone actually has cancer, the test will detect it 80% of the time.
+* So we would expect to see 8 out of 10 true positives and 2 out of 10 false negatives.
+* The false positive rate is 10%. This means that when someone doesn’t have cancer, the test will give a false alarm 10% of the time. So we would expect to see 99 out of 990 false positives and 891 true negatives in this scenario.
+* Now we can fill out all of the row totals of our contingency table.
+* Your friend got a positive test. We expect that out of 1000 people, there would be 107 positive test results and eight of these would actually be cancer.
+* So, given that someone has a positive test result, the probability that they actually do have cancer is 8 out of 107 or 7.5%.
+
+$$
+\begin{align}
+\mathrm{P}(\text{cancer}|\text{test positive}) &=
+\frac{\mathrm{P}(\text{test positive AND cancer})}{\mathrm{P}(\text{test positive})}\\[2ex]
+&= \frac{8/1000}{107/1000}\\[2ex]
+&\approx `r signif(8/107, 2)`
+\end{align}
+$$
+
+Was that what you wrote down at the start of this? Are you surprised?
+
+I am, even after doing these kinds of calculations many times. It just doesn’t seem right that a test with an 80% true positive rate and a 10% false positive rate would yield such a low probability of detecting actual cancer.
+
+But it all depends on the prevalence of cancer in the population we are applying the test to. This is called its base rate and being tricked by forgetting about it is called “base rate neglect.
+
+* In this example, cancer is infrequent.
+* So the detections are dominated by false alarms.
+* If we applied the same test to a population where the base rate of cancer was different, the probability of detecting cancer when it is really present would be different as well.
+
+I promise to show you two ways of tackling this situation.
+
+The second involves a decision tree.
+
+* We start with the sample space of all biopsies. The probability of something being in our sample space is, by definition, 1.
+* Next, we split that probability into the probability that the biopsy is cancerous, which is 1% or 0.01, and the probability it is not cancerous which is 0.99.
+* Next, we restrict our attention to biopsies of actual cancers. The test will correctly be positive 80% of the time, and will be wrong 20% of the time.
+* Turning to the biopsies that were not cancerous, the test will give a false alarm 10% of the time, and be correctly negative 90% of the time.
+* now we can multiply the probabilities along each path to find the probabilities of true positives, false negatives, false positives and true negatives.
+* Your friend has a positive result. The probability of getting a positive result is the probability of getting a true positive plus the probability of getting a false positive.
+
+So, given that your friend had a positive result, the probability that is biopsy is actually cancerous is the probability of getting a true positive, divided by the probability of getting a positive result.
+
+$$
+\begin{align}
+\mathrm{P}(\text{cancer}|\text{test positive}) &=
+\frac{\mathrm{P}(\text{test positive AND cancer})}{\mathrm{P}(\text{test positive})}\\[2ex]
+&= \frac{0.008}{0.008+0.099}\\[2ex]
+&\approx `r signif(0.008/(0.008+0.099), 2)`
+\end{align}
+$$
+
+Imagine you have another friend who took the same test, but got a negative result. What is the probability that they actually do have cancer even though the result was negative?
+
+Here’s a hint: think about all the branches that give a negative result, and think about the branch that gives a negative result, even though someone actually has cancer.
+
+$$
+\begin{align}
+\mathrm{P}(\text{cancer}|\text{test negative}) &=
+\frac{\mathrm{P}(\text{test negative AND cancer})}{\mathrm{P}(\text{test negative})}\\[2ex]
+&= \frac{0.002}{0.002+0.891}\\[2ex]
+&\approx `r signif(0.002/(0.002+0.891), 2)`
+\end{align}
+$$
+
+
+* What’s going on here relates directly to a very important theorem in probability proposed by the Reverend Thomas Bayes.
+* I strongly recommend that you look at Grant Sanderson‘s explanation of this on his three blue one brown YouTube channel. It is a thing of beauty.
+
+
+# Conclusion
+
+We have covered a lot of concepts related to binary classification, a fundamental topic in data science and statistics.
+
+* Have you understood them?
+* Could you explain them to someone else?
+
+Here are some questions to check what you now understand. If you are not sure, take some time to review this presentation
+
+* What is a confusion matrix? Can you draw one and label its cells, rows and columns?
+* What is an ROC curve and why is it better than using something like accuracy as a measure of classifier performance?
+* What is base rate neglect? Can you give an example that illustrates the impact that base rate has on correct classification?
+
+
+
+# References
+
+* https://kennis-research.shinyapps.io/ROC-Curves/
+* https://blog.revolutionanalytics.com/2016/08/roc-curves-in-two-lines-of-code.html
+* http://zevross.com/blog/2017/06/19/tips-and-tricks-for-working-with-images-and-figures-in-r-markdown-documents/
+* http://www.sthda.com/english/articles/24-ggpubr-publication-ready-plots/81-ggplot2-easy-way-to-mix-multiple-graphs-on-the-same-page/#arrange-on-one-page
+* http://zevross.com/blog/2017/06/19/tips-and-tricks-for-working-with-images-and-figures-in-r-markdown-documents/
+
+
+
